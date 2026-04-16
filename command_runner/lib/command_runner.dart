@@ -1,6 +1,6 @@
-class CommandRunner {
-  /// Runs the command-line application logic with the given arguments.
-  Future<void> run(List<String> input) async {
-    print('CommandRunner received arguments: $input');
-  }
-}
+library;
+
+export 'src/arguments.dart';
+export 'src/command_runner_base.dart';
+export 'src/help_command.dart';
+
