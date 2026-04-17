@@ -1,18 +1,34 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
+
 import 'arguments.dart';
+import 'exceptions.dart';
 
 class CommandRunner {
+  CommandRunner({this.onError});
+
   final Map<String, Command> _commands = <String, Command>{};
 
   UnmodifiableSetView<Command> get commands =>
       UnmodifiableSetView<Command>(<Command>{..._commands.values});
 
+  // Define the onError property.
+  FutureOr<void> Function(Object)? onError;
+
   Future<void> run(List<String> input) async {
-    final ArgResults results = parse(input);
-    if (results.command != null) {
-      Object? output = await results.command!.run(results);
-      print(output.toString());
+    try {
+      final ArgResults results = parse(input);
+      if (results.command != null) {
+        Object? output = await results.command!.run(results);
+        print(output.toString());
+      }
+    } on Exception catch (exception) {
+      if (onError != null) {
+        onError!(exception);
+      } else {
+        rethrow;
+      }
     }
   }
 
@@ -23,9 +39,102 @@ class CommandRunner {
   }
 
   ArgResults parse(List<String> input) {
-    var results = ArgResults();
-    results.command = _commands[input.first];
+    ArgResults results = ArgResults();
+    if (input.isEmpty) return results;
+
+    // Throw an exception if the command is not recognized.
+    if (_commands.containsKey(input.first)) {
+      results.command = _commands[input.first];
+      input = input.sublist(1);
+    } else {
+      throw ArgumentException(
+        'The first word of input must be a command.',
+        null,
+        input.first,
+      );
+    }
+
+    // Throw an exception if multiple commands are provided.
+    if (results.command != null &&
+        input.isNotEmpty &&
+        _commands.containsKey(input.first)) {
+      throw ArgumentException(
+        'Input can only contain one command. Got ${input.first} and ${results.command!.name}',
+        null,
+        input.first,
+      );
+    }
+
+    // Section: Handle options, including flags.
+    Map<Option, Object?> inputOptions = {};
+    int i = 0;
+    while (i < input.length) {
+      if (input[i].startsWith('-')) {
+        var base = _removeDash(input[i]);
+        // Throw an exception if an option is not recognized for the given command.
+        var option = results.command!.options.firstWhere(
+          (option) => option.name == base || option.abbr == base,
+          orElse: () {
+            throw ArgumentException(
+              'Unknown option ${input[i]}',
+              results.command!.name,
+              input[i],
+            );
+          },
+        );
+
+        if (option.type == OptionType.flag) {
+          inputOptions[option] = true;
+          i++;
+          continue;
+        }
+
+        if (option.type == OptionType.option) {
+          // Throw an exception if an option requires an argument but none is given.
+          if (i + 1 >= input.length) {
+            throw ArgumentException(
+              'Option ${option.name} requires an argument',
+              results.command!.name,
+              option.name,
+            );
+          }
+          if (input[i + 1].startsWith('-')) {
+            throw ArgumentException(
+              'Option ${option.name} requires an argument, but got another option ${input[i + 1]}',
+              results.command!.name,
+              option.name,
+            );
+          }
+          var arg = input[i + 1];
+          inputOptions[option] = arg;
+          i++;
+        }
+      } else {
+        // Throw an exception if more than one positional argument is provided.
+        if (results.commandArg != null && results.commandArg!.isNotEmpty) {
+          throw ArgumentException(
+            'Commands can only have up to one argument.',
+            results.command!.name,
+            input[i],
+          );
+        }
+        results.commandArg = input[i];
+      }
+      i++;
+    }
+    results.options = inputOptions;
+
     return results;
+  }
+
+  String _removeDash(String input) {
+    if (input.startsWith('--')) {
+      return input.substring(2);
+    }
+    if (input.startsWith('-')) {
+      return input.substring(1);
+    }
+    return input;
   }
 
   // Returns usage for the executable only.
