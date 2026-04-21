@@ -44,11 +44,12 @@ workspace:
 Install dependencies before running commands:
 
 ```powershell
+dart pub get
 cd cli
 dart pub get
 ```
 
-If you plan to work inside the package folders directly, it is also reasonable to run `dart pub get` in `command_runner` and `wikipedia`.
+The root `dart pub get` installs the dependencies needed for the workspace-level test runner. If you plan to work inside the package folders directly, it is also reasonable to run `dart pub get` in `cli`, `command_runner`, and `wikipedia`.
 
 ## Running the CLI
 
@@ -235,9 +236,10 @@ Key files:
 
 Verified from this workspace:
 
+- root workspace: `dart test` passes and runs all package test suites
+- `cli`: `dart test` passes
+- `command_runner`: `dart test` passes
 - `wikipedia`: `dart test` passes
-- `cli`: `dart test` currently fails because it still has scaffold test code referencing `calculate()`
-- `command_runner`: `dart test` currently fails because it still has scaffold test code referencing `Awesome()`
 
 ### Commands verified locally
 
@@ -250,8 +252,6 @@ The Wikipedia-backed commands are implemented, but they depend on runtime networ
 
 ## Known Limitations
 
-- `cli/test` still contains starter template test code and is not aligned with the current CLI package.
-- `command_runner/test` still contains starter template test code and is not aligned with the current command framework package.
 - `wikipedia/bin/wikipedia.dart` still appears to be scaffold output and is not the main user-facing executable for this project.
 - Logging is focused on warnings and failures rather than full request tracing.
 - Some package descriptions and package-level READMEs are still template text.
@@ -268,10 +268,19 @@ dart run bin/cli.dart search "Dart"
 dart run bin/cli.dart article Cat
 ```
 
+For running all tests at once from the repo root:
+
+```powershell
+dart pub get
+dart test
+```
+
+The root test runner streams each package test suite to the console and prefixes the output with the package name, for example `[cli]`, `[command_runner]`, and `[wikipedia]`.
+
 For package development:
 
 ```powershell
-cd wikipedia
+cd cli
 dart test
 ```
 
@@ -280,6 +289,11 @@ cd command_runner
 dart test
 ```
 
+```powershell
+cd wikipedia
+dart test
+```
+
 ## Repository Status
 
-This project is already usable as a CLI prototype for Wikipedia searches and article reads, but it still includes a few tutorial scaffold leftovers. The core command flow and Wikipedia integration are present; the main cleanup items are documentation polish, better success-path logging, and replacing the placeholder tests in `cli` and `command_runner`.
+This project is already usable as a CLI prototype for Wikipedia searches and article reads, but it still includes a few tutorial scaffold leftovers. The core command flow and Wikipedia integration are present; the main cleanup items are documentation polish, better success-path logging, and cleaning up remaining scaffold files such as `wikipedia/bin/wikipedia.dart`.

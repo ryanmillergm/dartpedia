@@ -1,0 +1,3 @@
+# https://dart.dev/guides/libraries/private-files
+# Root workspace-generated Dart tool state
+.dart_tool/
